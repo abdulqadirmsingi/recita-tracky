@@ -2,25 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { pool, initDb } = require('./db');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// In-memory storage (replace with a database in production)
-let reciters = [
-  { id: 1, name: "Reciter 1", assignedJuz: null, completed: false },
-  { id: 2, name: "Reciter 2", assignedJuz: null, completed: false },
-  { id: 3, name: "Reciter 3", assignedJuz: null, completed: false },
-  { id: 4, name: "Reciter 4", assignedJuz: null, completed: false },
-  { id: 5, name: "Reciter 5", assignedJuz: null, completed: false },
-  { id: 6, name: "Reciter 6", assignedJuz: null, completed: false },
-];
-
-let users = [];
-let admins = [];
-
 const JWT_SECRET = 'your-secret-key'; // In production, use environment variable
+
+// Initialize database on startup
+initDb().catch(console.error);
 
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
@@ -38,76 +29,115 @@ const authenticateToken = (req, res, next) => {
 
 // Auth routes
 app.post('/api/register', async (req, res) => {
-  const { username, password, isAdmin } = req.body;
-  
-  // Check if username already exists
-  if (users.find(u => u.username === username) || admins.find(a => a.username === username)) {
-    return res.status(400).json({ message: 'Username already exists' });
+  try {
+    const { username, password, isAdmin } = req.body;
+    
+    // Check if username already exists
+    const userExists = await pool.query(
+      'SELECT * FROM users WHERE username = $1',
+      [username]
+    );
+    
+    if (userExists.rows.length > 0) {
+      return res.status(400).json({ message: 'Username already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const result = await pool.query(
+      'INSERT INTO users (username, password, is_admin) VALUES ($1, $2, $3) RETURNING id',
+      [username, hashedPassword, isAdmin]
+    );
+
+    res.status(201).json({ message: 'User created successfully' });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = { id: Date.now(), username, password: hashedPassword };
-
-  if (isAdmin) {
-    admins.push(newUser);
-  } else {
-    users.push(newUser);
-  }
-
-  res.status(201).json({ message: 'User created successfully' });
 });
 
 app.post('/api/login', async (req, res) => {
-  const { username, password, isAdmin } = req.body;
-  const usersList = isAdmin ? admins : users;
-  const user = usersList.find(u => u.username === username);
+  try {
+    const { username, password } = req.body;
+    
+    const result = await pool.query(
+      'SELECT * FROM users WHERE username = $1',
+      [username]
+    );
 
-  if (!user) {
-    return res.status(400).json({ message: 'User not found' });
+    if (result.rows.length === 0) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+
+    const user = result.rows[0];
+    const validPassword = await bcrypt.compare(password, user.password);
+    
+    if (!validPassword) {
+      return res.status(400).json({ message: 'Invalid password' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, isAdmin: user.is_admin },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    res.json({ token, isAdmin: user.is_admin });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-
-  const validPassword = await bcrypt.compare(password, user.password);
-  if (!validPassword) {
-    return res.status(400).json({ message: 'Invalid password' });
-  }
-
-  const token = jwt.sign({ id: user.id, username: user.username, isAdmin }, JWT_SECRET, { expiresIn: '24h' });
-  res.json({ token, isAdmin });
 });
 
 // Protected routes
-app.get('/api/reciters', authenticateToken, (req, res) => {
-  res.json(reciters);
-});
-
-app.put('/api/reciters/:id/assign', authenticateToken, (req, res) => {
-  const { id } = req.params;
-  const { juz } = req.body;
-  
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ message: 'Admin access required' });
+app.get('/api/reciters', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM reciters ORDER BY id'
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching reciters:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-  
-  reciters = reciters.map(reciter =>
-    reciter.id === parseInt(id)
-      ? { ...reciter, assignedJuz: juz, completed: false }
-      : reciter
-  );
-  
-  res.json(reciters.find(r => r.id === parseInt(id)));
 });
 
-app.put('/api/reciters/:id/complete', authenticateToken, (req, res) => {
-  const { id } = req.params;
-  const { completed } = req.body;
-  
-  reciters = reciters.map(reciter =>
-    reciter.id === parseInt(id)
-      ? { ...reciter, completed }
-      : reciter
-  );
-  
-  res.json(reciters.find(r => r.id === parseInt(id)));
+app.put('/api/reciters/:id/assign', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { juz } = req.body;
+    
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    const result = await pool.query(
+      'UPDATE reciters SET assigned_juz = $1, completed = false WHERE id = $2 RETURNING *',
+      [juz, id]
+    );
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error assigning juz:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.put('/api/reciters/:id/complete', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { completed } = req.body;
+    
+    const result = await pool.query(
+      'UPDATE reciters SET completed = $1 WHERE id = $2 RETURNING *',
+      [completed, id]
+    );
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating completion status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 const PORT = process.env.PORT || 3001;
