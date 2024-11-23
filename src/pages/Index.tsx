@@ -17,20 +17,28 @@ const Index = () => {
   };
 
   // Fetch reciters
-  const { data: reciters = [], isLoading } = useQuery({
+  const { data: reciters = [], isLoading, error } = useQuery({
     queryKey: ['reciters'],
     queryFn: async () => {
+      console.log('Fetching reciters with token:', token);
       const response = await fetch('http://localhost:3001/api/reciters', {
         headers
       });
-      if (!response.ok) throw new Error('Failed to fetch reciters');
-      return response.json();
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('Fetch error:', error);
+        throw new Error('Failed to fetch reciters');
+      }
+      const data = await response.json();
+      console.log('Fetched reciters:', data);
+      return data;
     },
   });
 
   // Assign Juz mutation
   const assignJuzMutation = useMutation({
     mutationFn: async ({ reciterId, juz }: { reciterId: number; juz: number }) => {
+      console.log('Assigning juz:', { reciterId, juz });
       const response = await fetch(`http://localhost:3001/api/reciters/${reciterId}/assign`, {
         method: 'PUT',
         headers,
@@ -43,7 +51,8 @@ const Index = () => {
       queryClient.invalidateQueries({ queryKey: ['reciters'] });
       toast.success("Juz assigned successfully");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Assign error:', error);
       toast.error("Failed to assign Juz");
     },
   });
@@ -51,6 +60,7 @@ const Index = () => {
   // Complete Juz mutation
   const completeMutation = useMutation({
     mutationFn: async ({ reciterId, completed }: { reciterId: number; completed: boolean }) => {
+      console.log('Updating completion:', { reciterId, completed });
       const response = await fetch(`http://localhost:3001/api/reciters/${reciterId}/complete`, {
         method: 'PUT',
         headers,
@@ -63,7 +73,8 @@ const Index = () => {
       queryClient.invalidateQueries({ queryKey: ['reciters'] });
       toast.success("Progress updated successfully");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Complete error:', error);
       toast.error("Failed to update progress");
     },
   });
@@ -78,6 +89,10 @@ const Index = () => {
 
   if (isLoading) {
     return <div className="min-h-screen bg-[#FFFBF5] p-8 flex items-center justify-center">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen bg-[#FFFBF5] p-8 flex items-center justify-center text-red-500">Error loading data</div>;
   }
 
   return (

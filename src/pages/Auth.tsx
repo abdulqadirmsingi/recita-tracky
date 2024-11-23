@@ -16,8 +16,16 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!username || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
     try {
       const endpoint = isLogin ? '/api/login' : '/api/register';
+      console.log('Making auth request to:', endpoint);
+      
       const response = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -25,9 +33,10 @@ const Auth = () => {
       });
 
       const data = await response.json();
+      console.log('Auth response:', data);
 
       if (!response.ok) {
-        throw new Error(data.message);
+        throw new Error(data.message || 'Authentication failed');
       }
 
       if (isLogin) {
@@ -39,6 +48,7 @@ const Auth = () => {
         setIsLogin(true);
       }
     } catch (error) {
+      console.error('Auth error:', error);
       toast.error(error instanceof Error ? error.message : 'An error occurred');
     }
   };
@@ -71,16 +81,18 @@ const Auth = () => {
                 className="w-full"
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isAdmin"
-                checked={isAdmin}
-                onChange={(e) => setIsAdmin(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              <label htmlFor="isAdmin">Register as Admin</label>
-            </div>
+            {!isLogin && (
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isAdmin"
+                  checked={isAdmin}
+                  onChange={(e) => setIsAdmin(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <label htmlFor="isAdmin">Register as Admin</label>
+              </div>
+            )}
             <Button type="submit" className="w-full">
               {isLogin ? 'Login' : 'Register'}
             </Button>
@@ -88,7 +100,10 @@ const Auth = () => {
               {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button
                 type="button"
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setIsAdmin(false);
+                }}
                 className="text-blue-600 hover:underline"
               >
                 {isLogin ? 'Register' : 'Login'}
