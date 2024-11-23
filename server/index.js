@@ -92,10 +92,12 @@ app.post('/api/login', async (req, res) => {
 // Protected routes
 app.get('/api/reciters', authenticateToken, async (req, res) => {
   try {
+    console.log('Fetching reciters for user:', req.user.username);
     const result = await pool.query(
-      'SELECT r.*, CASE WHEN r.username = $1 OR $2 THEN true ELSE false END as can_edit FROM reciters r',
+      'SELECT *, CASE WHEN username = $1 OR $2 THEN true ELSE false END as can_edit FROM reciters',
       [req.user.username, req.user.isAdmin]
     );
+    console.log('Reciters fetched successfully:', result.rows);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching reciters:', error);
