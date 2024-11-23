@@ -27,6 +27,17 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Public endpoint for fetching reciters (no authentication required)
+app.get('/api/reciters', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM reciters');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching reciters:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Auth routes
 app.post('/api/register', async (req, res) => {
   try {
@@ -95,7 +106,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Protected routes
-app.get('/api/reciters', authenticateToken, async (req, res) => {
+app.get('/api/reciters/protected', authenticateToken, async (req, res) => {
   try {
     console.log('Fetching reciters for user:', req.user.username);
     const result = await pool.query(
@@ -140,7 +151,6 @@ app.put('/api/reciters/:id/complete', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { completed } = req.body;
     
-    // Check if user is admin or the owner of the record
     const reciter = await pool.query(
       'SELECT * FROM reciters WHERE id = $1',
       [id]
