@@ -21,13 +21,15 @@ const initDb = async () => {
       );
     `);
 
-    // Create reciters table
+    // Create reciters table with username column
     await pool.query(`
       CREATE TABLE IF NOT EXISTS reciters (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
+        username VARCHAR(255),
         assigned_juz INTEGER,
-        completed BOOLEAN DEFAULT false
+        completed BOOLEAN DEFAULT false,
+        FOREIGN KEY (username) REFERENCES users(username)
       );
     `);
 
