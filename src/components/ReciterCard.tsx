@@ -44,7 +44,7 @@ const ReciterCard = ({ reciter, isAdmin, onComplete }: ReciterCardProps) => {
               id={`complete-${reciter.id}`}
               checked={reciter.completed}
               onCheckedChange={handleComplete}
-              disabled={!reciter.assigned_juz || (!reciter.can_edit && !isAdmin)}
+              disabled={!reciter.assigned_juz || !reciter.can_edit}
               className="h-6 w-6"
             />
             <label htmlFor={`complete-${reciter.id}`} className="text-sm font-medium">

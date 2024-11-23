@@ -99,7 +99,7 @@ app.get('/api/reciters', authenticateToken, async (req, res) => {
   try {
     console.log('Fetching reciters for user:', req.user.username);
     const result = await pool.query(
-      'SELECT *, CASE WHEN username = $1 OR $2 = true THEN true ELSE false END as can_edit FROM reciters',
+      'SELECT r.*, CASE WHEN r.name = $1 OR $2 = true THEN true ELSE false END as can_edit FROM reciters r',
       [req.user.username, req.user.isAdmin]
     );
     console.log('Reciters fetched successfully:', result.rows);
@@ -150,7 +150,7 @@ app.put('/api/reciters/:id/complete', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Reciter not found' });
     }
     
-    if (!req.user.isAdmin && reciter.rows[0].username !== req.user.username) {
+    if (!req.user.isAdmin && reciter.rows[0].name !== req.user.username) {
       return res.status(403).json({ message: 'Unauthorized to update this record' });
     }
     
