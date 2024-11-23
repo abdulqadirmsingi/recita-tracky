@@ -1,37 +1,59 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReciterCard from "@/components/ReciterCard";
 import AdminPanel from "@/components/AdminPanel";
 import { Button } from "@/components/ui/button";
 import { Reciter } from "@/types";
+import { api } from "@/services/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const Index = () => {
   const [isAdmin, setIsAdmin] = useState(false);
-  const [reciters, setReciters] = useState<Reciter[]>([
-    { id: 1, name: "Reciter 1", assignedJuz: null, completed: false },
-    { id: 2, name: "Reciter 2", assignedJuz: null, completed: false },
-    { id: 3, name: "Reciter 3", assignedJuz: null, completed: false },
-    { id: 4, name: "Reciter 4", assignedJuz: null, completed: false },
-    { id: 5, name: "Reciter 5", assignedJuz: null, completed: false },
-    { id: 6, name: "Reciter 6", assignedJuz: null, completed: false },
-  ]);
+  const queryClient = useQueryClient();
+
+  // Fetch reciters
+  const { data: reciters = [], isLoading } = useQuery({
+    queryKey: ['reciters'],
+    queryFn: api.getReciters,
+  });
+
+  // Assign Juz mutation
+  const assignJuzMutation = useMutation({
+    mutationFn: ({ reciterId, juz }: { reciterId: number; juz: number }) =>
+      api.assignJuz(reciterId, juz),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reciters'] });
+      toast.success("Juz assigned successfully");
+    },
+    onError: () => {
+      toast.error("Failed to assign Juz");
+    },
+  });
+
+  // Complete Juz mutation
+  const completeMutation = useMutation({
+    mutationFn: ({ reciterId, completed }: { reciterId: number; completed: boolean }) =>
+      api.updateCompletion(reciterId, completed),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reciters'] });
+      toast.success("Progress updated successfully");
+    },
+    onError: () => {
+      toast.error("Failed to update progress");
+    },
+  });
 
   const handleAssignJuz = (reciterId: number, juz: number) => {
-    setReciters((prev) =>
-      prev.map((reciter) =>
-        reciter.id === reciterId
-          ? { ...reciter, assignedJuz: juz, completed: false }
-          : reciter
-      )
-    );
+    assignJuzMutation.mutate({ reciterId, juz });
   };
 
   const handleComplete = (id: number, completed: boolean) => {
-    setReciters((prev) =>
-      prev.map((reciter) =>
-        reciter.id === id ? { ...reciter, completed } : reciter
-      )
-    );
+    completeMutation.mutate({ reciterId: id, completed });
   };
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-[#FFFBF5] p-8 flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#FFFBF5] p-8">
