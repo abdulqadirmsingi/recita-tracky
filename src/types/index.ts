@@ -1,7 +1,7 @@
 export interface Reciter {
   id: number;
   name: string;
-  assignedJuz: number | null;
+  assigned_juz: number | null;
   completed: boolean;
 }
 
