@@ -93,7 +93,8 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/reciters', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM reciters ORDER BY id'
+      'SELECT r.*, CASE WHEN r.username = $1 OR $2 THEN true ELSE false END as can_edit FROM reciters r',
+      [req.user.username, req.user.isAdmin]
     );
     res.json(result.rows);
   } catch (error) {
@@ -136,6 +137,20 @@ app.put('/api/reciters/:id/complete', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { completed } = req.body;
+    
+    // Check if user is admin or the owner of the record
+    const reciter = await pool.query(
+      'SELECT * FROM reciters WHERE id = $1',
+      [id]
+    );
+    
+    if (reciter.rows.length === 0) {
+      return res.status(404).json({ message: 'Reciter not found' });
+    }
+    
+    if (!req.user.isAdmin && reciter.rows[0].username !== req.user.username) {
+      return res.status(403).json({ message: 'Unauthorized to update this record' });
+    }
     
     const result = await pool.query(
       'UPDATE reciters SET completed = $1 WHERE id = $2 RETURNING *',

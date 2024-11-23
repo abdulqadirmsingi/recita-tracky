@@ -11,6 +11,14 @@ interface ReciterCardProps {
 
 const ReciterCard = ({ reciter, isAdmin, onComplete }: ReciterCardProps) => {
   const handleComplete = () => {
+    if (!reciter.can_edit) {
+      toast({
+        title: "Access Denied",
+        description: "You can only update your own completion status.",
+        variant: "destructive",
+      });
+      return;
+    }
     onComplete(reciter.id, !reciter.completed);
     toast({
       title: "Status Updated",
@@ -36,7 +44,7 @@ const ReciterCard = ({ reciter, isAdmin, onComplete }: ReciterCardProps) => {
               id={`complete-${reciter.id}`}
               checked={reciter.completed}
               onCheckedChange={handleComplete}
-              disabled={!reciter.assigned_juz || (reciter.completed && !isAdmin)}
+              disabled={!reciter.assigned_juz || (!reciter.can_edit && !isAdmin)}
               className="h-6 w-6"
             />
             <label htmlFor={`complete-${reciter.id}`} className="text-sm font-medium">

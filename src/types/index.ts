@@ -3,8 +3,12 @@ export interface Reciter {
   name: string;
   assigned_juz: number | null;
   completed: boolean;
+  username: string;
+  can_edit: boolean;
 }
 
-export interface AdminState {
+export interface User {
+  id: number;
+  username: string;
   isAdmin: boolean;
 }
