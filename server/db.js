@@ -11,6 +11,10 @@ const pool = new Pool({
 // Initialize database tables
 const initDb = async () => {
   try {
+    // Drop existing tables to ensure clean slate
+    await pool.query('DROP TABLE IF EXISTS reciters CASCADE');
+    await pool.query('DROP TABLE IF EXISTS users CASCADE');
+
     // Create users table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -21,7 +25,7 @@ const initDb = async () => {
       );
     `);
 
-    // Create reciters table with username column
+    // Create reciters table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS reciters (
         id SERIAL PRIMARY KEY,

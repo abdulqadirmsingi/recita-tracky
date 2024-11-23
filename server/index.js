@@ -31,8 +31,8 @@ const authenticateToken = (req, res, next) => {
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password, isAdmin } = req.body;
+    console.log('Registering user:', { username, isAdmin });
     
-    // Check if username already exists
     const userExists = await pool.query(
       'SELECT * FROM users WHERE username = $1',
       [username]
@@ -45,10 +45,11 @@ app.post('/api/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const result = await pool.query(
-      'INSERT INTO users (username, password, is_admin) VALUES ($1, $2, $3) RETURNING id',
+      'INSERT INTO users (username, password, is_admin) VALUES ($1, $2, $3) RETURNING id, username, is_admin',
       [username, hashedPassword, isAdmin]
     );
 
+    console.log('User registered successfully:', result.rows[0]);
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
     console.error('Registration error:', error);
@@ -59,6 +60,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
+    console.log('Login attempt for user:', username);
     
     const result = await pool.query(
       'SELECT * FROM users WHERE username = $1',
@@ -66,6 +68,7 @@ app.post('/api/login', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      console.log('User not found:', username);
       return res.status(400).json({ message: 'User not found' });
     }
 
@@ -73,6 +76,7 @@ app.post('/api/login', async (req, res) => {
     const validPassword = await bcrypt.compare(password, user.password);
     
     if (!validPassword) {
+      console.log('Invalid password for user:', username);
       return res.status(400).json({ message: 'Invalid password' });
     }
 
@@ -82,6 +86,7 @@ app.post('/api/login', async (req, res) => {
       { expiresIn: '24h' }
     );
     
+    console.log('User logged in successfully:', { username, isAdmin: user.is_admin });
     res.json({ token, isAdmin: user.is_admin });
   } catch (error) {
     console.error('Login error:', error);
@@ -94,7 +99,7 @@ app.get('/api/reciters', authenticateToken, async (req, res) => {
   try {
     console.log('Fetching reciters for user:', req.user.username);
     const result = await pool.query(
-      'SELECT *, CASE WHEN username = $1 OR $2 THEN true ELSE false END as can_edit FROM reciters',
+      'SELECT *, CASE WHEN username = $1 OR $2 = true THEN true ELSE false END as can_edit FROM reciters',
       [req.user.username, req.user.isAdmin]
     );
     console.log('Reciters fetched successfully:', result.rows);
