@@ -44,10 +44,19 @@ const Index = () => {
         headers,
         body: JSON.stringify({ juz }),
       });
-      if (!response.ok) throw new Error('Failed to assign Juz');
-      return response.json();
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Assignment error:', errorText);
+        throw new Error('Failed to assign Juz');
+      }
+      
+      const data = await response.json();
+      console.log('Assignment response:', data);
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Assignment successful:', data);
       queryClient.invalidateQueries({ queryKey: ['reciters'] });
       toast.success("Juz assigned successfully");
     },
@@ -80,6 +89,7 @@ const Index = () => {
   });
 
   const handleAssignJuz = (reciterId: number, juz: number) => {
+    console.log('handleAssignJuz called with:', { reciterId, juz });
     assignJuzMutation.mutate({ reciterId, juz });
   };
 

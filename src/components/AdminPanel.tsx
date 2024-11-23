@@ -16,6 +16,7 @@ interface AdminPanelProps {
 
 const AdminPanel = ({ reciters, onAssignJuz }: AdminPanelProps) => {
   const handleAssign = (reciterId: number, juz: string) => {
+    console.log('AdminPanel handleAssign:', { reciterId, juz });
     onAssignJuz(reciterId, parseInt(juz));
     toast({
       title: "Juz' Assigned",
@@ -32,7 +33,7 @@ const AdminPanel = ({ reciters, onAssignJuz }: AdminPanelProps) => {
             <span className="font-medium">{reciter.name}</span>
             <div className="flex items-center space-x-2">
               <Select
-                value={reciter.assignedJuz?.toString()}
+                value={reciter.assigned_juz?.toString()}
                 onValueChange={(value) => handleAssign(reciter.id, value)}
               >
                 <SelectTrigger className="w-32">

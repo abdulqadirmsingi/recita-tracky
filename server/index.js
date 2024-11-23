@@ -107,7 +107,10 @@ app.put('/api/reciters/:id/assign', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { juz } = req.body;
     
+    console.log('Assigning juz:', { id, juz, user: req.user });
+    
     if (!req.user.isAdmin) {
+      console.log('Assignment rejected: User is not admin');
       return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -116,10 +119,16 @@ app.put('/api/reciters/:id/assign', authenticateToken, async (req, res) => {
       [juz, id]
     );
     
+    if (result.rows.length === 0) {
+      console.log('Assignment failed: Reciter not found');
+      return res.status(404).json({ message: 'Reciter not found' });
+    }
+    
+    console.log('Assignment successful:', result.rows[0]);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error assigning juz:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
