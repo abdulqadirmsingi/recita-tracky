@@ -1,26 +1,44 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ReciterCard from "@/components/ReciterCard";
 import AdminPanel from "@/components/AdminPanel";
 import { Button } from "@/components/ui/button";
-import { Reciter } from "@/types";
-import { api } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 const Index = () => {
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin, logout } = useAuth();
   const queryClient = useQueryClient();
+  const token = localStorage.getItem('token');
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
 
   // Fetch reciters
   const { data: reciters = [], isLoading } = useQuery({
     queryKey: ['reciters'],
-    queryFn: api.getReciters,
+    queryFn: async () => {
+      const response = await fetch('http://localhost:3001/api/reciters', {
+        headers
+      });
+      if (!response.ok) throw new Error('Failed to fetch reciters');
+      return response.json();
+    },
   });
 
   // Assign Juz mutation
   const assignJuzMutation = useMutation({
-    mutationFn: ({ reciterId, juz }: { reciterId: number; juz: number }) =>
-      api.assignJuz(reciterId, juz),
+    mutationFn: async ({ reciterId, juz }: { reciterId: number; juz: number }) => {
+      const response = await fetch(`http://localhost:3001/api/reciters/${reciterId}/assign`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ juz }),
+      });
+      if (!response.ok) throw new Error('Failed to assign Juz');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reciters'] });
       toast.success("Juz assigned successfully");
@@ -32,8 +50,15 @@ const Index = () => {
 
   // Complete Juz mutation
   const completeMutation = useMutation({
-    mutationFn: ({ reciterId, completed }: { reciterId: number; completed: boolean }) =>
-      api.updateCompletion(reciterId, completed),
+    mutationFn: async ({ reciterId, completed }: { reciterId: number; completed: boolean }) => {
+      const response = await fetch(`http://localhost:3001/api/reciters/${reciterId}/complete`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ completed }),
+      });
+      if (!response.ok) throw new Error('Failed to update completion status');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reciters'] });
       toast.success("Progress updated successfully");
@@ -62,11 +87,8 @@ const Index = () => {
           <h1 className="text-4xl font-bold text-gray-900">
             Quran Recitation Tracker
           </h1>
-          <Button
-            onClick={() => setIsAdmin(!isAdmin)}
-            variant={isAdmin ? "destructive" : "default"}
-          >
-            {isAdmin ? "Exit Admin Mode" : "Enter Admin Mode"}
+          <Button onClick={logout} variant="destructive">
+            Logout
           </Button>
         </div>
 
