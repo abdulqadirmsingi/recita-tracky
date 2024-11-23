@@ -17,7 +17,23 @@ interface AdminPanelProps {
 const AdminPanel = ({ reciters, onAssignJuz }: AdminPanelProps) => {
   const handleAssign = (reciterId: number, juz: string) => {
     console.log('AdminPanel handleAssign:', { reciterId, juz });
-    onAssignJuz(reciterId, parseInt(juz));
+    const juzNumber = parseInt(juz);
+    
+    // Check if this Juz is already assigned to another reciter
+    const isJuzAssigned = reciters.some(
+      reciter => reciter.assigned_juz === juzNumber && reciter.id !== reciterId
+    );
+
+    if (isJuzAssigned) {
+      toast({
+        title: "Assignment Failed",
+        description: `Juz' ${juz} is already assigned to another reciter`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    onAssignJuz(reciterId, juzNumber);
     toast({
       title: "Juz' Assigned",
       description: `Successfully assigned Juz' ${juz}`,

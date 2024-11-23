@@ -10,10 +10,11 @@ import { toast } from 'sonner';
 const Auth = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent, isAdmin: boolean) => {
+  const handleAuth = async (e: React.FormEvent, isAdmin: boolean) => {
     e.preventDefault();
     
     if (!username || !password) {
@@ -22,7 +23,7 @@ const Auth = () => {
     }
 
     try {
-      const endpoint = '/api/login';
+      const endpoint = isRegistering ? '/api/register' : '/api/login';
       console.log('Making auth request to:', endpoint);
       
       const response = await fetch(`http://localhost:3001${endpoint}`, {
@@ -38,9 +39,14 @@ const Auth = () => {
         throw new Error(data.message || 'Authentication failed');
       }
 
-      login(data.token, data.isAdmin);
-      toast.success('Logged in successfully');
-      navigate('/');
+      if (!isRegistering) {
+        login(data.token, data.isAdmin);
+        toast.success('Logged in successfully');
+        navigate('/');
+      } else {
+        toast.success('Registration successful! Please login.');
+        setIsRegistering(false);
+      }
     } catch (error) {
       console.error('Auth error:', error);
       toast.error(error instanceof Error ? error.message : 'An error occurred');
@@ -58,12 +64,12 @@ const Auth = () => {
         <CardContent>
           <Tabs defaultValue="user" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="user">User Login</TabsTrigger>
-              <TabsTrigger value="admin">Admin Login</TabsTrigger>
+              <TabsTrigger value="user">User</TabsTrigger>
+              <TabsTrigger value="admin">Admin</TabsTrigger>
             </TabsList>
             
             <TabsContent value="user">
-              <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
+              <form onSubmit={(e) => handleAuth(e, false)} className="space-y-4">
                 <div>
                   <Input
                     type="text"
@@ -83,13 +89,22 @@ const Auth = () => {
                   />
                 </div>
                 <Button type="submit" className="w-full">
-                  Login as User
+                  {isRegistering ? 'Register' : 'Login'}
                 </Button>
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => setIsRegistering(!isRegistering)}
+                  >
+                    {isRegistering ? 'Already have an account? Login' : "Don't have an account? Register"}
+                  </Button>
+                </div>
               </form>
             </TabsContent>
             
             <TabsContent value="admin">
-              <form onSubmit={(e) => handleSubmit(e, true)} className="space-y-4">
+              <form onSubmit={(e) => handleAuth(e, true)} className="space-y-4">
                 <div>
                   <Input
                     type="text"
@@ -109,8 +124,17 @@ const Auth = () => {
                   />
                 </div>
                 <Button type="submit" className="w-full">
-                  Login as Admin
+                  {isRegistering ? 'Register Admin' : 'Login as Admin'}
                 </Button>
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => setIsRegistering(!isRegistering)}
+                  >
+                    {isRegistering ? 'Already have an account? Login' : "Don't have an account? Register"}
+                  </Button>
+                </div>
               </form>
             </TabsContent>
           </Tabs>

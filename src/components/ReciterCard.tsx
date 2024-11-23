@@ -28,7 +28,7 @@ const ReciterCard = ({ reciter, isAdmin, onComplete }: ReciterCardProps) => {
           <div>
             <p className="text-sm text-gray-600">Assigned Juz':</p>
             <p className="text-lg font-medium">
-              {reciter.assignedJuz ? `Juz' ${reciter.assignedJuz}` : "Not assigned"}
+              {reciter.assigned_juz ? `Juz' ${reciter.assigned_juz}` : "Not assigned"}
             </p>
           </div>
           <div className="flex items-center space-x-2">
@@ -36,7 +36,7 @@ const ReciterCard = ({ reciter, isAdmin, onComplete }: ReciterCardProps) => {
               id={`complete-${reciter.id}`}
               checked={reciter.completed}
               onCheckedChange={handleComplete}
-              disabled={!reciter.assignedJuz || (reciter.completed && !isAdmin)}
+              disabled={!reciter.assigned_juz || (reciter.completed && !isAdmin)}
               className="h-6 w-6"
             />
             <label htmlFor={`complete-${reciter.id}`} className="text-sm font-medium">
